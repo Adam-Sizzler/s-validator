@@ -87,7 +87,7 @@ func (outboundOptionsRegistry) CreateOptions(outboundType string) (any, bool) {
 	case C.TypeVLESS:
 		return new(option.VLESSOutboundOptions), true
 	case C.TypeWireGuard:
-		return new(option.LegacyWireGuardOutboundOptions), true
+		return new(option.StubOptions), true
 	case C.TypeHysteria:
 		return new(option.HysteriaOutboundOptions), true
 	case C.TypeTUIC:

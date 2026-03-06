@@ -1,31 +1,34 @@
 # s-validator
 
-WASM-валидатор конфигов `sing-box` на теге `v1.11.13`.
+WASM-валидатор конфигов `sing-box` с мультиверсионным деплоем на GitHub Pages.
 
-## Что делает
+## URL-структура
 
-- Загружает `main.wasm` в браузере.
-- Экспортирует `window.SingboxParseConfig(config: string)`.
-- Валидирует конфиг через нативный парсер `sing-box`:
-  1. Парсинг `option.Options` (с `DisallowUnknownFields`).
-  2. Проверка встроенных ограничений/типов из `option`-структур.
+- `https://adam-sizzler.github.io/s-validator/` — всегда `latest`
+- `https://adam-sizzler.github.io/s-validator/v/1.11.13/` — фиксированная версия
+- `https://adam-sizzler.github.io/s-validator/v/1.12.24/` — фиксированная версия
+- `https://adam-sizzler.github.io/s-validator/v/latest/` — алиас `latest`
 
-Из-за несовместимости ряда runtime-зависимостей `sing-box` с `js/wasm`
-браузерная сборка не выполняет полный `box.New(...)` как в CLI-команде `sing-box check`.
+Список фиксированных версий хранится в [`versions.json`](./versions.json):
 
-## Локальная сборка
-
-```bash
-cd go
-go mod tidy
-make build
-cd ..
-npm ci
-npm run build
+```json
+{
+  "pinnedVersions": ["1.11.13", "1.12.24"],
+  "includeLatest": true
+}
 ```
 
-`make build` кладет в `public/`:
+## Как это собирается
 
-- `main.wasm`
-- `wasm_exec.js`
-- `singbox.schema.json`
+- Для каждой версии собирается свой `main.wasm`/`wasm_exec.js`.
+- Для каждой версии фронтенд собирается со своим `base` (`/`, `/v/1.11.13/`, `/v/1.12.24/`, `/v/latest/`).
+- Готовая структура складывается в `site/` и деплоится в GitHub Pages.
+
+Скрипт сборки: [`scripts/build-pages.sh`](./scripts/build-pages.sh).
+
+## Локальная сборка мультиверсий
+
+```bash
+npm ci
+./scripts/build-pages.sh
+```
