@@ -16,5 +16,25 @@ main.wasm: main.go go.mod go.sum
 		-o main.wasm \
 		main.go
 
+singbox.schema.json:
+	@printf '%s\n' \
+	'{' \
+	'  "$schema": "http://json-schema.org/draft-07/schema#",' \
+	'  "title": "sing-box configuration",' \
+	'  "type": "object",' \
+	'  "properties": {' \
+	'    "$schema": { "type": "string" },' \
+	'    "log": { "type": "object" },' \
+	'    "dns": { "type": "object" },' \
+	'    "ntp": { "type": "object" },' \
+	'    "endpoints": { "type": "array", "items": { "type": "object" } },' \
+	'    "inbounds": { "type": "array", "items": { "type": "object" } },' \
+	'    "outbounds": { "type": "array", "items": { "type": "object" } },' \
+	'    "route": { "type": "object" },' \
+	'    "experimental": { "type": "object" }' \
+	'  },' \
+	'  "additionalProperties": true' \
+	'}' > singbox.schema.json
+
 clean:
 	rm -f main.wasm wasm_exec.js
