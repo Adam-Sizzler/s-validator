@@ -1,6 +1,6 @@
 import { ActionIcon, Group, Text, Title } from '@mantine/core'
 import { PiGithubLogo, PiStar } from 'react-icons/pi'
-import singboxLogo from '@public/singbox-logo.svg'
+import singboxLogo from '@public/favicon-64.png'
 
 import { StickyHeader } from '@/shared/ui/sticky-header'
 
