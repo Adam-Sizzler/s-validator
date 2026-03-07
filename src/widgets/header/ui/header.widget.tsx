@@ -44,11 +44,16 @@ export function HeaderWidget(props: Props) {
                     rel="noreferrer"
                     target="_blank"
                 >
-                    <picture>
-                        <source media="(prefers-color-scheme: dark)" srcSet="./favicon-dark.svg" />
-                        <source media="(prefers-color-scheme: light)" srcSet="./favicon-light.svg" />
-                        <img alt="sing-box" className={classes.logoIcon} src="./favicon-light.svg" />
-                    </picture>
+                    <img
+                        alt="sing-box"
+                        className={`${classes.logoIcon} ${classes.logoIconLight}`}
+                        src="./favicon-light.svg"
+                    />
+                    <img
+                        alt="sing-box"
+                        className={`${classes.logoIcon} ${classes.logoIconDark}`}
+                        src="./favicon-dark.svg"
+                    />
                 </Text>
 
                 <ActionIcon
