@@ -1,5 +1,6 @@
 import { ActionIcon, Group, Text, Title } from '@mantine/core'
 import { PiGithubLogo, PiStar } from 'react-icons/pi'
+import singboxLogo from '@public/singbox-logo.svg'
 
 import { StickyHeader } from '@/shared/ui/sticky-header'
 
@@ -35,10 +36,16 @@ export function HeaderWidget(props: Props) {
 
             <Group gap="xs">
                 <Text c="dimmed" size="md">
-                    Powered by{' '}
-                    <Text component="a" href={singboxTagUrl} inherit>
-                        sing-box@{normalizedVersion}
-                    </Text>
+                    Powered by
+                </Text>
+                <Text
+                    className={classes.logoLink}
+                    component="a"
+                    href={singboxTagUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                >
+                    <img alt="sing-box" className={classes.logoIcon} src={singboxLogo} />
                 </Text>
 
                 <ActionIcon

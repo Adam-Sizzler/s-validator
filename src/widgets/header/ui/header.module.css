@@ -9,3 +9,19 @@
         padding-bottom: 1.25rem;
     }
 }
+
+.logoLink {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    color: var(--mantine-color-dimmed);
+    text-decoration: none;
+}
+
+.logoIcon {
+    display: block;
+    width: 1.35rem;
+    height: 1.35rem;
+}
