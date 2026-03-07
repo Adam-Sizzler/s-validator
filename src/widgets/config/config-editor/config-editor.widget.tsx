@@ -1,16 +1,16 @@
 import { Box, Code, Paper, Title, useMantineColorScheme } from '@mantine/core'
-import { monacoTheme } from '@/shared/lib/monaco-theme'
 import Editor, { Monaco } from '@monaco-editor/react'
 import { useEffect, useRef, useState } from 'react'
 
 import { ConfigEditorActionsFeature } from '@features/config/config-editor-actions/ui'
 import { ConfigValidationFeature } from '@features/config/config-validation/ui'
 import { MonacoSetupFeature } from '@features/config/monaco-setup/lib'
+import { monacoTheme } from '@/shared/lib/monaco-theme'
 
 import { Props } from './interfaces'
 
 export function ConfigEditorWidget(props: Props) {
-    const { config, version } = props
+    const { config, onSelectVersion, selectedVersion, version, versionOptions } = props
     const [result, setResult] = useState('')
     const [isConfigValid, setIsConfigValid] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
@@ -32,6 +32,17 @@ export function ConfigEditorWidget(props: Props) {
 
     return (
         <Box>
+            {result && (
+                <>
+                    <Title mb="xs" order={4}>
+                        Validation result
+                    </Title>
+                    <Code block mb="md" p="md">
+                        {result}
+                    </Code>
+                </>
+            )}
+
             <Paper mb="md" p={0} radius="xs" withBorder>
                 <Editor
                     beforeMount={handleEditorDidMount}
@@ -90,20 +101,12 @@ export function ConfigEditorWidget(props: Props) {
                 isConfigValid={isConfigValid}
                 isSaving={isSaving}
                 monacoRef={monacoRef}
+                onSelectVersion={onSelectVersion}
+                selectedVersion={selectedVersion}
                 setIsSaving={setIsSaving}
                 setResult={setResult}
+                versionOptions={versionOptions}
             />
-
-            {result && (
-                <>
-                    <Title mb="xs" order={4}>
-                        Validation result
-                    </Title>
-                    <Code block p="md">
-                        {result}
-                    </Code>
-                </>
-            )}
         </Box>
     )
 }

@@ -81,6 +81,22 @@ short_version() {
   echo "${tag#v}"
 }
 
+requires_dns_transport_registry_tag() {
+  local version="${1#v}"
+  local major minor patch
+  IFS='.' read -r major minor patch <<<"${version}"
+  if [[ -z "${major}" || -z "${minor}" ]]; then
+    return 1
+  fi
+  if (( major > 1 )); then
+    return 0
+  fi
+  if (( major == 1 && minor >= 12 )); then
+    return 0
+  fi
+  return 1
+}
+
 build_go_artifacts() {
   local singbox_tag="$1"
   (
@@ -230,7 +246,13 @@ EOF
 
     go mod edit -replace github.com/sagernet/sing=./.patched-sing
     go mod tidy
-    SINGBOX_TAG="${singbox_tag}" make build
+
+    local go_build_tags=""
+    if requires_dns_transport_registry_tag "${singbox_tag}"; then
+      go_build_tags="singbox_dns_transport_registry"
+    fi
+
+    SINGBOX_TAG="${singbox_tag}" GO_BUILD_TAGS="${go_build_tags}" make build
   )
 }
 
@@ -262,6 +284,16 @@ for version in "${PINNED_VERSIONS[@]}"; do
   build_frontend "${pinned_base_path}" "${pinned_output}"
 done
 
+default_version=""
+if [[ "${#PINNED_VERSIONS[@]}" -gt 0 ]]; then
+  default_version="${PINNED_VERSIONS[0]}"
+  default_tag="v${default_version#v}"
+
+  echo "Building default version ${default_tag} -> /"
+  build_go_artifacts "${default_tag}"
+  build_frontend "$(base_path_for "")" "${SITE_DIR}" true
+fi
+
 if [[ "${INCLUDE_LATEST}" == "true" ]]; then
   latest_tag="$(
     cd go
@@ -269,10 +301,14 @@ if [[ "${INCLUDE_LATEST}" == "true" ]]; then
   )"
   latest_short="$(short_version "${latest_tag}")"
 
-  echo "Building latest version ${latest_tag} -> / and v/latest"
+  echo "Building latest version ${latest_tag} -> v/latest"
   build_go_artifacts "${latest_tag}"
-  build_frontend "$(base_path_for "")" "${SITE_DIR}" true
   build_frontend "$(base_path_for "v/latest")" "${SITE_DIR}/v/latest"
+
+  if [[ -z "${default_version}" ]]; then
+    echo "No pinned version configured, using latest as default -> /"
+    build_frontend "$(base_path_for "")" "${SITE_DIR}" true
+  fi
 
   node --input-type=module -e '
     import fs from "node:fs";

@@ -27,19 +27,9 @@ export const DEFAULT_CONFIG = {
         {
             type: 'block',
             tag: 'block'
-        },
-        {
-            type: 'dns',
-            tag: 'dns-out'
         }
     ],
     route: {
-        final: 'direct',
-        rules: [
-            {
-                protocol: 'dns',
-                outbound: 'dns-out'
-            }
-        ]
+        final: 'direct'
     }
 }

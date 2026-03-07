@@ -1,10 +1,22 @@
 import { ActionIcon, Group, Text, Title } from '@mantine/core'
-import { StickyHeader } from '@/shared/ui/sticky-header'
 import { PiGithubLogo, PiStar } from 'react-icons/pi'
+
+import { StickyHeader } from '@/shared/ui/sticky-header'
 
 import classes from './header.module.css'
 
-export function HeaderWidget() {
+interface Props {
+    version: null | string
+}
+
+export function HeaderWidget(props: Props) {
+    const { version } = props
+    let normalizedVersion = 'v1.11.13'
+    if (version) {
+        normalizedVersion = version.startsWith('v') ? version : `v${version}`
+    }
+    const singboxTagUrl = `https://github.com/SagerNet/sing-box/tree/${normalizedVersion}`
+
     return (
         <StickyHeader className={classes.root} px="md">
             <Group h="100%" justify="space-between">
@@ -24,14 +36,14 @@ export function HeaderWidget() {
             <Group gap="xs">
                 <Text c="dimmed" size="md">
                     Powered by{' '}
-                    <Text component="a" href="https://github.com/SagerNet/sing-box/tree/v1.11.13" inherit>
-                        sing-box@v1.11.13
+                    <Text component="a" href={singboxTagUrl} inherit>
+                        sing-box@{normalizedVersion}
                     </Text>
                 </Text>
 
                 <ActionIcon
                     component="a"
-                    href="https://github.com/SagerNet/sing-box/tree/v1.11.13"
+                    href={singboxTagUrl}
                     size="lg"
                     target="_blank"
                     variant="subtle"

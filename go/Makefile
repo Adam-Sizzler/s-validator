@@ -1,4 +1,5 @@
 SINGBOX_TAG ?= v1.11.13
+GO_BUILD_TAGS ?=
 
 .PHONY: build clean
 
@@ -9,12 +10,13 @@ build: main.wasm wasm_exec.js singbox.schema.json
 wasm_exec.js:
 	cp "$$(go env GOROOT)/lib/wasm/wasm_exec.js" wasm_exec.js
 
-main.wasm: main.go go.mod go.sum
+main.wasm: $(wildcard *.go) go.mod go.sum
 	GOARCH=wasm GOOS=js go build \
 		-trimpath \
+		$(if $(strip $(GO_BUILD_TAGS)),-tags "$(GO_BUILD_TAGS)") \
 		-ldflags "-s -w -X github.com/sagernet/sing-box/constant.Version=$(SINGBOX_TAG)" \
 		-o main.wasm \
-		main.go
+		.
 
 singbox.schema.json:
 	@printf '%s\n' \

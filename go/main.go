@@ -115,6 +115,7 @@ func newParserContext() context.Context {
 	ctx = service.ContextWith[option.InboundOptionsRegistry](ctx, inboundOptionsRegistry{})
 	ctx = service.ContextWith[option.OutboundOptionsRegistry](ctx, outboundOptionsRegistry{})
 	ctx = service.ContextWith[option.EndpointOptionsRegistry](ctx, endpointOptionsRegistry{})
+	ctx = withDNSTransportRegistry(ctx)
 	return ctx
 }
 

@@ -7,15 +7,21 @@ import { Page } from '@/shared/ui/page'
 import { Props } from './interfaces'
 
 export const ConfigPageComponent = (props: Props) => {
-    const { config, version } = props
+    const { config, onSelectVersion, selectedVersion, version, versionOptions } = props
 
     return (
         <>
-            <HeaderWidget />
+            <HeaderWidget version={version} />
 
             <Container size="lg">
                 <Page title="Config">
-                    <ConfigEditorWidget config={config} version={version} />
+                    <ConfigEditorWidget
+                        config={config}
+                        onSelectVersion={onSelectVersion}
+                        selectedVersion={selectedVersion}
+                        version={version}
+                        versionOptions={versionOptions}
+                    />
                 </Page>
             </Container>
         </>
