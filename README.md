@@ -1,31 +1,30 @@
 # s-validator
 
-WASM-валидатор конфигов `sing-box` с мультиверсионным деплоем на GitHub Pages.
+WASM-based `sing-box` configuration validator with a single-version GitHub Pages deployment.
 
-## URL-структура
+## URL structure
 
-- `https://adam-sizzler.github.io/s-validator/` — версия `1.11.13` по умолчанию
-- `https://adam-sizzler.github.io/s-validator/v/1.11.13/` — фиксированная версия
-- `https://adam-sizzler.github.io/s-validator/v/latest/` — алиас `latest`
+- `https://adam-sizzler.github.io/s-validator/` - default version `1.13.3`
+- `https://adam-sizzler.github.io/s-validator/v/1.13.3/` - fixed version path
 
-Список фиксированных версий хранится в [`versions.json`](./versions.json):
+The pinned version is configured in [`versions.json`](./versions.json):
 
 ```json
 {
-  "pinnedVersions": ["1.11.13"],
-  "includeLatest": true
+  "pinnedVersions": ["1.13.3"],
+  "includeLatest": false
 }
 ```
 
-## Как это собирается
+## Build behavior
 
-- Для каждой версии собирается свой `main.wasm`/`wasm_exec.js`.
-- Для каждой версии фронтенд собирается со своим `base` (`/`, `/v/1.11.13/`, `/v/latest/`).
-- Готовая структура складывается в `site/` и деплоится в GitHub Pages.
+- A single `main.wasm` and `wasm_exec.js` pair is built for `1.13.3`.
+- The frontend is built for `/` and `/v/1.13.3/` using the same core version.
+- The output is written to `site/` and deployed to GitHub Pages.
 
-Скрипт сборки: [`scripts/build-pages.sh`](./scripts/build-pages.sh).
+Build script: [`scripts/build-pages.sh`](./scripts/build-pages.sh).
 
-## Локальная сборка мультиверсий
+## Local build
 
 ```bash
 npm ci

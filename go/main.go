@@ -13,7 +13,7 @@ import (
 	"github.com/sagernet/sing/service"
 )
 
-const fallbackVersion = "v1.11.13"
+const fallbackVersion = "v1.13.3"
 
 type inboundOptionsRegistry struct{}
 

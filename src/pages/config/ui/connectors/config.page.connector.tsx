@@ -4,7 +4,6 @@ import { consola } from 'consola/browser'
 import {
     DEFAULT_CONFIG,
     DEFAULT_SUPPORTED_VERSION,
-    LATEST_SUPPORTED_VERSION,
     SUPPORTED_VERSION_OPTIONS
 } from '@/shared/constants'
 import { fetchWithProgress } from '@/shared/utils/fetch-with-progress'
@@ -61,7 +60,7 @@ export function ConfigPageConnector() {
             return DEFAULT_SUPPORTED_VERSION
         }
 
-        if (versionFromPath === DEFAULT_SUPPORTED_VERSION || versionFromPath === LATEST_SUPPORTED_VERSION) {
+        if (versionFromPath === DEFAULT_SUPPORTED_VERSION) {
             return versionFromPath
         }
 

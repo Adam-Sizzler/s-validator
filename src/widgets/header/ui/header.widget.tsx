@@ -11,7 +11,7 @@ interface Props {
 
 export function HeaderWidget(props: Props) {
     const { version } = props
-    let normalizedVersion = 'v1.11.13'
+    let normalizedVersion = 'v1.13.3'
     if (version) {
         normalizedVersion = version.startsWith('v') ? version : `v${version}`
     }

@@ -1,4 +1,4 @@
 {
-  "pinnedVersions": ["1.11.13"],
-  "includeLatest": true
+  "pinnedVersions": ["1.13.3"],
+  "includeLatest": false
 }
