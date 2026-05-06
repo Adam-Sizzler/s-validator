@@ -2,8 +2,7 @@ name: Deploy S Validator
 
 on:
     push:
-        branches: ['main']
-    workflow_dispatch:
+        tags: ['*']
 
 permissions:
     contents: read
