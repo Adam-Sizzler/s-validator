@@ -1,4 +1,4 @@
-SINGBOX_TAG ?= v1.13.3
+SINGBOX_TAG ?= v1.13.11
 GO_BUILD_TAGS ?=
 
 .PHONY: build clean

@@ -26,6 +26,12 @@ export const Page = forwardRef<HTMLDivElement, PageProps>(
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         initial={{ opacity: 0 }}
+                        style={{
+                            display: 'flex',
+                            flex: '1 1 auto',
+                            flexDirection: 'column',
+                            minHeight: 0
+                        }}
                         transition={{
                             duration: 0.3,
                             ease: 'easeInOut'

@@ -7,11 +7,13 @@ import (
 	"net"
 	"net/netip"
 	"os"
+	"time"
 
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/auth"
 	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/bufio"
+	"github.com/sagernet/sing/common/canceler"
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
@@ -23,6 +25,10 @@ import (
 type HandlerEx interface {
 	N.TCPConnectionHandlerEx
 	N.UDPConnectionHandlerEx
+}
+
+type PacketListener interface {
+	ListenPacket(listenConfig net.ListenConfig, ctx context.Context, network string, address string) (net.PacketConn, error)
 }
 
 func ClientHandshake4(conn io.ReadWriter, command byte, destination M.Socksaddr, username string) (socks4.Response, error) {
@@ -121,6 +127,9 @@ func HandleConnectionEx(
 	ctx context.Context, conn net.Conn, reader *std_bufio.Reader,
 	authenticator *auth.Authenticator,
 	handler HandlerEx,
+	packetListener PacketListener,
+	udpTimeout time.Duration,
+	// resolver TorResolver,
 	source M.Socksaddr,
 	onClose N.CloseHandlerFunc,
 ) error {
@@ -148,6 +157,11 @@ func HandleConnectionEx(
 			}
 			handler.NewConnectionEx(auth.ContextWithUser(ctx, request.Username), NewLazyConn(conn, version), source, request.Destination, onClose)
 			return nil
+		/*case CommandTorResolve, CommandTorResolvePTR:
+		if resolver == nil {
+			return E.New("socks4: torsocks: commands not implemented")
+		}
+		return handleTorSocks4(ctx, conn, request, resolver)*/
 		default:
 			err = socks4.WriteResponse(conn, socks4.Response{
 				ReplyCode: socks4.ReplyCodeRejectedOrFailed,
@@ -214,28 +228,49 @@ func HandleConnectionEx(
 			handler.NewConnectionEx(ctx, NewLazyConn(conn, version), source, request.Destination, onClose)
 			return nil
 		case socks5.CommandUDPAssociate:
-			var udpConn *net.UDPConn
-			udpConn, err = net.ListenUDP(M.NetworkFromNetAddr("udp", M.AddrFromNet(conn.LocalAddr())), net.UDPAddrFromAddrPort(netip.AddrPortFrom(M.AddrFromNet(conn.LocalAddr()), 0)))
+			var (
+				listenConfig net.ListenConfig
+				udpConn      net.PacketConn
+			)
+			if packetListener != nil {
+				udpConn, err = packetListener.ListenPacket(listenConfig, ctx, M.NetworkFromNetAddr("udp", M.AddrFromNet(conn.LocalAddr())), M.SocksaddrFrom(M.AddrFromNet(conn.LocalAddr()), 0).String())
+			} else {
+				udpConn, err = listenConfig.ListenPacket(ctx, M.NetworkFromNetAddr("udp", M.AddrFromNet(conn.LocalAddr())), M.SocksaddrFrom(M.AddrFromNet(conn.LocalAddr()), 0).String())
+			}
 			if err != nil {
 				return E.Cause(err, "socks5: listen udp")
 			}
 			err = socks5.WriteResponse(conn, socks5.Response{
 				ReplyCode: socks5.ReplyCodeSuccess,
-				Bind:      M.SocksaddrFromNet(udpConn.LocalAddr()),
+				Bind:      M.SocksaddrFromNet(udpConn.LocalAddr()).Unwrap(),
 			})
 			if err != nil {
 				return E.Cause(err, "socks5: write response")
 			}
 			var socksPacketConn N.PacketConn = NewAssociatePacketConn(bufio.NewServerPacketConn(udpConn), M.Socksaddr{}, conn)
+			if udpTimeout > 0 {
+				udpConn.SetReadDeadline(time.Now().Add(udpTimeout))
+			}
 			firstPacket := buf.NewPacket()
 			var destination M.Socksaddr
 			destination, err = socksPacketConn.ReadPacket(firstPacket)
 			if err != nil {
 				return E.Cause(err, "socks5: read first packet")
 			}
+			if udpTimeout > 0 {
+				udpConn.SetReadDeadline(time.Time{})
+			}
+			if udpTimeout > 0 {
+				ctx, socksPacketConn = canceler.NewPacketConn(ctx, socksPacketConn, udpTimeout)
+			}
 			socksPacketConn = bufio.NewCachedPacketConn(socksPacketConn, firstPacket, destination)
 			handler.NewPacketConnectionEx(ctx, socksPacketConn, source, destination, onClose)
 			return nil
+		/*case CommandTorResolve, CommandTorResolvePTR:
+		if resolver == nil {
+			return E.New("socks4: torsocks: commands not implemented")
+		}
+		return handleTorSocks5(ctx, conn, request, resolver)*/
 		default:
 			err = socks5.WriteResponse(conn, socks5.Response{
 				ReplyCode: socks5.ReplyCodeUnsupported,

@@ -2,11 +2,18 @@
 
 html,
 body {
-    min-height: 100vh;
+    height: 100%;
+    min-height: 100%;
+    margin: 0;
+}
+
+body {
+    overflow: hidden;
 }
 
 #root {
-    height: 100vh;
+    height: 100dvh;
+    min-height: 100dvh;
 
     @mixin dark {
         .mrt-table-head-sort-button {
@@ -19,5 +26,4 @@ body {
         }
     }
 }
-
 

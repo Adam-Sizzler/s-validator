@@ -13,7 +13,7 @@ import (
 	"github.com/sagernet/sing/service"
 )
 
-const fallbackVersion = "v1.13.3"
+const fallbackVersion = "v1.13.11"
 
 type inboundOptionsRegistry struct{}
 
@@ -41,6 +41,8 @@ func (inboundOptionsRegistry) CreateOptions(inboundType string) (any, bool) {
 		return new(option.NaiveInboundOptions), true
 	case C.TypeShadowTLS:
 		return new(option.ShadowTLSInboundOptions), true
+	case C.TypeAnyTLS:
+		return new(option.AnyTLSInboundOptions), true
 	case C.TypeVLESS:
 		return new(option.VLESSInboundOptions), true
 	case C.TypeHysteria:
@@ -76,12 +78,16 @@ func (outboundOptionsRegistry) CreateOptions(outboundType string) (any, bool) {
 		return new(option.VMessOutboundOptions), true
 	case C.TypeTrojan:
 		return new(option.TrojanOutboundOptions), true
+	case C.TypeNaive:
+		return new(option.NaiveOutboundOptions), true
 	case C.TypeTor:
 		return new(option.TorOutboundOptions), true
 	case C.TypeSSH:
 		return new(option.SSHOutboundOptions), true
 	case C.TypeShadowTLS:
 		return new(option.ShadowTLSOutboundOptions), true
+	case C.TypeAnyTLS:
+		return new(option.AnyTLSOutboundOptions), true
 	case C.TypeShadowsocksR:
 		return new(option.ShadowsocksROutboundOptions), true
 	case C.TypeVLESS:
@@ -105,6 +111,29 @@ func (endpointOptionsRegistry) CreateOptions(endpointType string) (any, bool) {
 	switch endpointType {
 	case C.TypeWireGuard:
 		return new(option.WireGuardEndpointOptions), true
+	case C.TypeTailscale:
+		return new(option.TailscaleEndpointOptions), true
+	default:
+		return nil, false
+	}
+}
+
+type serviceOptionsRegistry struct{}
+
+func (serviceOptionsRegistry) CreateOptions(serviceType string) (any, bool) {
+	switch serviceType {
+	case C.TypeDERP:
+		return new(option.DERPServiceOptions), true
+	case C.TypeResolved:
+		return new(option.ResolvedServiceOptions), true
+	case C.TypeSSMAPI:
+		return new(option.SSMAPIServiceOptions), true
+	case C.TypeCCM:
+		return new(option.CCMServiceOptions), true
+	case C.TypeOCM:
+		return new(option.OCMServiceOptions), true
+	case C.TypeOOMKiller:
+		return new(option.OOMKillerServiceOptions), true
 	default:
 		return nil, false
 	}
@@ -115,6 +144,7 @@ func newParserContext() context.Context {
 	ctx = service.ContextWith[option.InboundOptionsRegistry](ctx, inboundOptionsRegistry{})
 	ctx = service.ContextWith[option.OutboundOptionsRegistry](ctx, outboundOptionsRegistry{})
 	ctx = service.ContextWith[option.EndpointOptionsRegistry](ctx, endpointOptionsRegistry{})
+	ctx = service.ContextWith[option.ServiceOptionsRegistry](ctx, serviceOptionsRegistry{})
 	ctx = withDNSTransportRegistry(ctx)
 	return ctx
 }

@@ -3,8 +3,8 @@ module github.com/Adam-Sizzler/s-validator
 go 1.24.7
 
 require (
-	github.com/sagernet/sing v0.8.2
-	github.com/sagernet/sing-box v1.13.3
+	github.com/sagernet/sing v0.8.9
+	github.com/sagernet/sing-box v1.13.11
 )
 
 require (

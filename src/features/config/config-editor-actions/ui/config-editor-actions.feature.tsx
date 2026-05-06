@@ -21,7 +21,7 @@ export function ConfigEditorActionsFeature(props: Props) {
         versionOptions.find((option) => option.value === selectedVersion)?.label || selectedVersion
 
     return (
-        <Group gap="xs" justify="space-between" mb="md">
+        <Group gap="xs" justify="space-between">
             <Button
                 leftSection={<PiCheckSquareOffset size={'1.4rem'} />}
                 onClick={formatDocument}

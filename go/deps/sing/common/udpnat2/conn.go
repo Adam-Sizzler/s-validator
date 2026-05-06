@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/canceler"
 	M "github.com/sagernet/sing/common/metadata"
@@ -57,6 +58,8 @@ func (c *natConn) WritePacket(buffer *buf.Buffer, destination M.Socksaddr) error
 }
 
 func (c *natConn) InitializeReadWaiter(options N.ReadWaitOptions) (needCopy bool) {
+	c.handlerAccess.Lock()
+	defer c.handlerAccess.Unlock()
 	c.readWaitOptions = options
 	return false
 }
@@ -108,6 +111,7 @@ func (c *natConn) SetTimeout(timeout time.Duration) bool {
 func (c *natConn) Close() error {
 	c.closeOnce.Do(func() {
 		close(c.doneChan)
+		common.Close(c.handler)
 	})
 	return nil
 }

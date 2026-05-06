@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"net"
-	"syscall"
 
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
@@ -15,7 +14,16 @@ import (
 	"github.com/sagernet/sing/common/task"
 )
 
+const (
+	DefaultIncreaseBufferAfter = 512 * 1000
+	DefaultBatchSize           = 8
+)
+
 func Copy(destination io.Writer, source io.Reader) (n int64, err error) {
+	return CopyWithIncreateBuffer(destination, source, DefaultIncreaseBufferAfter, DefaultBatchSize)
+}
+
+func CopyWithIncreateBuffer(destination io.Writer, source io.Reader, increaseBufferAfter int64, batchSize int) (n int64, err error) {
 	if source == nil {
 		return 0, E.New("nil reader")
 	} else if destination == nil {
@@ -46,41 +54,83 @@ func Copy(destination io.Writer, source io.Reader) (n int64, err error) {
 		}
 		break
 	}
-	return CopyWithCounters(destination, source, originSource, readCounters, writeCounters)
+	return CopyWithCounters(destination, source, originSource, readCounters, writeCounters, increaseBufferAfter, batchSize)
 }
 
-func CopyWithCounters(destination io.Writer, source io.Reader, originSource io.Reader, readCounters []N.CountFunc, writeCounters []N.CountFunc) (n int64, err error) {
-	srcSyscallConn, srcIsSyscall := source.(syscall.Conn)
-	dstSyscallConn, dstIsSyscall := destination.(syscall.Conn)
-	if srcIsSyscall && dstIsSyscall {
-		var handled bool
-		handled, n, err = copyDirect(srcSyscallConn, dstSyscallConn, readCounters, writeCounters)
-		if handled {
-			return
-		}
+func CopyWithCounters(destination io.Writer, source io.Reader, originSource io.Reader, readCounters []N.CountFunc, writeCounters []N.CountFunc, increaseBufferAfter int64, batchSize int) (n int64, err error) {
+	sourceReader := source
+	destinationWriter := destination
+	extendedDestination := NewExtendedWriter(destinationWriter)
+	extendedSource := NewExtendedReader(sourceReader)
+	readWaitOptions := N.NewReadWaitOptions(extendedSource, extendedDestination)
+	readWaitOptions.BatchSize = batchSize
+	session := NewCopySession(destinationWriter, sourceReader, originSource, CopyOptions{
+		ReadWaitOptions:     readWaitOptions,
+		IncreaseBufferAfter: increaseBufferAfter,
+		ReadCounters:        readCounters,
+		WriteCounters:       writeCounters,
+		Handshake:           N.NewHandshakeState(sourceReader, destinationWriter),
+	})
+	refreshUnwrap := func() {
+		sourceReader, readCounters = N.UnwrapCountReader(sourceReader, readCounters)
+		destinationWriter, writeCounters = N.UnwrapCountWriter(destinationWriter, writeCounters)
+		extendedDestination = NewExtendedWriter(destinationWriter)
+		extendedSource = NewExtendedReader(sourceReader)
+		readWaitOptions := N.NewReadWaitOptions(extendedSource, extendedDestination)
+		readWaitOptions.BatchSize = session.options.ReadWaitOptions.BatchSize
+		session.options.ReadWaitOptions = readWaitOptions
+		session.options.ReadCounters = readCounters
+		session.options.WriteCounters = writeCounters
+		session.source = sourceReader
+		session.destination = destinationWriter
+		session.ResetHandshake()
 	}
-	return CopyExtended(originSource, NewExtendedWriter(destination), NewExtendedReader(source), readCounters, writeCounters)
+	for {
+		handled, directN, directErr := copyDirect(sourceReader, destinationWriter, session.options.ReadCounters, session.options.WriteCounters)
+		n += directN
+		if handled {
+			if errors.Is(directErr, N.ErrHandshakeCompleted) {
+				refreshUnwrap()
+				continue
+			}
+			return n, directErr
+		}
+		extN, extErr := copyExtended(session, extendedDestination, extendedSource)
+		n += extN
+		if errors.Is(extErr, N.ErrHandshakeCompleted) {
+			refreshUnwrap()
+			continue
+		}
+		return n, extErr
+	}
 }
 
-func CopyExtended(originSource io.Reader, destination N.ExtendedWriter, source N.ExtendedReader, readCounters []N.CountFunc, writeCounters []N.CountFunc) (n int64, err error) {
-	frontHeadroom := N.CalculateFrontHeadroom(destination)
-	rearHeadroom := N.CalculateRearHeadroom(destination)
+func CopyExtended(originSource io.Reader, destination N.ExtendedWriter, source N.ExtendedReader, readCounters []N.CountFunc, writeCounters []N.CountFunc, increaseBufferAfter int64, batchSize int) (n int64, err error) {
+	readWaitOptions := N.NewReadWaitOptions(source, destination)
+	readWaitOptions.BatchSize = batchSize
+	session := NewCopySession(destination, source, originSource, CopyOptions{
+		ReadWaitOptions:     readWaitOptions,
+		IncreaseBufferAfter: increaseBufferAfter,
+		ReadCounters:        readCounters,
+		WriteCounters:       writeCounters,
+	})
+	return copyExtended(session, destination, source)
+}
+
+func copyExtended(session *CopySession, destination N.ExtendedWriter, source N.ExtendedReader) (n int64, err error) {
+	options := session.options.ReadWaitOptions
 	readWaiter, isReadWaiter := CreateReadWaiter(source)
 	if isReadWaiter {
-		needCopy := readWaiter.InitializeReadWaiter(N.ReadWaitOptions{
-			FrontHeadroom: frontHeadroom,
-			RearHeadroom:  rearHeadroom,
-			MTU:           N.CalculateMTU(source, destination),
-		})
+		needCopy := readWaiter.InitializeReadWaiter(options)
 		if !needCopy || common.LowMemory {
 			var handled bool
-			handled, n, err = copyWaitWithPool(originSource, destination, readWaiter, readCounters, writeCounters)
+			handled, n, err = copyWaitWithPool(session, destination, source, readWaiter, options)
 			if handled {
 				return
 			}
 		}
 	}
-	return CopyExtendedWithPool(originSource, destination, source, readCounters, writeCounters)
+	return copyExtendedWithPool(session, destination, source)
 }
 
 // Deprecated: not used
@@ -121,8 +171,19 @@ func CopyExtendedBuffer(originSource io.Writer, destination N.ExtendedWriter, so
 	}
 }
 
-func CopyExtendedWithPool(originSource io.Reader, destination N.ExtendedWriter, source N.ExtendedReader, readCounters []N.CountFunc, writeCounters []N.CountFunc) (n int64, err error) {
-	options := N.NewReadWaitOptions(source, destination)
+func CopyExtendedWithPool(originSource io.Reader, destination N.ExtendedWriter, source N.ExtendedReader, readCounters []N.CountFunc, writeCounters []N.CountFunc, increaseBufferAfter int64) (n int64, err error) {
+	readWaitOptions := N.NewReadWaitOptions(source, destination)
+	session := NewCopySession(destination, source, originSource, CopyOptions{
+		ReadWaitOptions:     readWaitOptions,
+		IncreaseBufferAfter: increaseBufferAfter,
+		ReadCounters:        readCounters,
+		WriteCounters:       writeCounters,
+	})
+	return copyExtendedWithPool(session, destination, source)
+}
+
+func copyExtendedWithPool(session *CopySession, destination N.ExtendedWriter, source N.ExtendedReader) (n int64, err error) {
+	options := session.options.ReadWaitOptions
 	var notFirstTime bool
 	for {
 		buffer := options.NewBuffer()
@@ -141,18 +202,18 @@ func CopyExtendedWithPool(originSource io.Reader, destination N.ExtendedWriter, 
 		if err != nil {
 			buffer.Leak()
 			if !notFirstTime {
-				err = N.ReportHandshakeFailure(originSource, err)
+				err = N.ReportHandshakeFailure(session.originSource, err)
 			}
 			return
 		}
 		n += int64(dataLen)
-		for _, counter := range readCounters {
-			counter(int64(dataLen))
-		}
-		for _, counter := range writeCounters {
-			counter(int64(dataLen))
+		if err = session.Transfer(int64(dataLen)); err != nil {
+			return
 		}
 		notFirstTime = true
+		if !options.IncreaseBuffer && session.options.IncreaseBufferAfter > 0 && n >= session.options.IncreaseBufferAfter {
+			options.IncreaseBuffer = true
+		}
 	}
 }
 

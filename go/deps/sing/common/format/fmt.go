@@ -46,6 +46,10 @@ func ToString(messages ...any) string {
 			output += strconv.FormatInt(int64(message), 10)
 		case int64:
 			output += strconv.FormatInt(message, 10)
+		case float32:
+			output += strconv.FormatFloat(float64(message), 'f', -1, 32)
+		case float64:
+			output += strconv.FormatFloat(message, 'f', -1, 64)
 		case uintptr:
 			output += strconv.FormatUint(uint64(message), 10)
 		case error:
@@ -69,5 +73,5 @@ func MapToString[T any](arr []T) []string {
 
 func Seconds(seconds float64) string {
 	seconds100 := int(seconds * 100)
-	return ToString(seconds100/100, ".", seconds100%100, seconds100%10)
+	return ToString(seconds100/100, ".", seconds100%100/10, seconds100%10)
 }

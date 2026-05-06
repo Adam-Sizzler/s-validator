@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/sagernet/sing/common/atomic"
+	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
@@ -24,7 +24,7 @@ type PacketReader interface {
 
 type packetReader struct {
 	TimeoutPacketReader
-	deadline     atomic.TypedValue[time.Time]
+	deadline     common.TypedValue[time.Time]
 	pipeDeadline pipeDeadline
 	result       chan *packetReadResult
 	done         chan struct{}
@@ -82,7 +82,7 @@ func (r *packetReader) pipeReadFrom(pLen int) {
 func (r *packetReader) pipeReturnFrom(result *packetReadResult, p []byte) (n int, addr net.Addr, err error) {
 	n = copy(p, result.buffer.Bytes())
 	if result.destination.IsValid() {
-		if result.destination.IsFqdn() {
+		if result.destination.IsDomain() {
 			addr = result.destination
 		} else {
 			addr = result.destination.UDPAddr()

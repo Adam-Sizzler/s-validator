@@ -8,6 +8,7 @@ import { MonacoSetupFeature } from '@features/config/monaco-setup/lib'
 import { monacoTheme } from '@/shared/lib/monaco-theme'
 
 import { Props } from './interfaces'
+import classes from './config-editor.module.css'
 
 export function ConfigEditorWidget(props: Props) {
     const { config, onSelectVersion, selectedVersion, version, versionOptions } = props
@@ -31,23 +32,23 @@ export function ConfigEditorWidget(props: Props) {
     }
 
     return (
-        <Box>
+        <Box className={classes.root}>
             {result && (
-                <>
+                <Box className={classes.result}>
                     <Title mb="xs" order={4}>
                         Validation result
                     </Title>
-                    <Code block mb="md" p="md">
+                    <Code block p="md">
                         {result}
                     </Code>
-                </>
+                </Box>
             )}
 
-            <Paper mb="md" p={0} radius="xs" withBorder>
+            <Paper className={classes.editorPanel} p={0} radius="xs" withBorder>
                 <Editor
                     beforeMount={handleEditorDidMount}
                     defaultLanguage="json"
-                    height="600px"
+                    height="100%"
                     loading={'Loading editor...'}
                     onChange={() =>
                         ConfigValidationFeature.validate(
@@ -96,17 +97,19 @@ export function ConfigEditorWidget(props: Props) {
                 />
             </Paper>
 
-            <ConfigEditorActionsFeature
-                editorRef={editorRef}
-                isConfigValid={isConfigValid}
-                isSaving={isSaving}
-                monacoRef={monacoRef}
-                onSelectVersion={onSelectVersion}
-                selectedVersion={selectedVersion}
-                setIsSaving={setIsSaving}
-                setResult={setResult}
-                versionOptions={versionOptions}
-            />
+            <Box className={classes.actions}>
+                <ConfigEditorActionsFeature
+                    editorRef={editorRef}
+                    isConfigValid={isConfigValid}
+                    isSaving={isSaving}
+                    monacoRef={monacoRef}
+                    onSelectVersion={onSelectVersion}
+                    selectedVersion={selectedVersion}
+                    setIsSaving={setIsSaving}
+                    setResult={setResult}
+                    versionOptions={versionOptions}
+                />
+            </Box>
         </Box>
     )
 }
