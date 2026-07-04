@@ -6,8 +6,8 @@ export const DEFAULT_CONFIG = {
         servers: [
             {
                 tag: 'dns-remote',
-                type: 'https', // <-- ДОБАВЛЕНО: Обязательное поле для sing-box
-                address: 'https://1.1.1.1/dns-query',
+                type: 'udp',
+                server: '1.1.1.1',
                 detour: 'direct'
             }
         ]
