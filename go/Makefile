@@ -30,7 +30,8 @@ assets/sing-patched: sing-wasm.patch
 	cat sing-wasm.patch | (cd assets/sing && git apply)
 	mv assets/sing assets/sing-patched
 
-main.wasm: assets/sing-patched $(wildcard *.go) go.mod go.sum
+main.wasm: assets/sing-patched $(wildcard *.go) go.mod
+	go mod tidy
 	GOARCH=wasm GOOS=js go build \
 		-trimpath \
 		-tags "$(GO_BUILD_TAGS)" \
