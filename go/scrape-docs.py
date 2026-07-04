@@ -6,7 +6,7 @@ Unlike Xray-docs-next, sing-box docs don't use a special ">`field`: type"
 convention -- they're plain mkdocs pages with "#### field_name" headers and
 free-form markdown underneath. So instead of inferring JSON types from the
 text, we just extract (name, markdownDescription, required) per field and
-keep the schema permissive (additionalProperties: true) on those objects.
+keep the schema strict (additionalProperties: false) on those objects to catch typos.
 Hard validation of actual values is left to the sing-box core itself (via
 wasm) -- this schema's job is autocomplete + hover docs + catching typos in
 enum-like fields such as "type".
@@ -105,17 +105,58 @@ def build_discriminated_array(
     config_dir: str, category: str, extra_shared: list[str]
 ) -> dict:
     """Builds a schema for arrays like inbounds/outbounds/endpoints/dns servers,
-    where a 'type' field selects the protocol. Each type gets its own
-    'if type==X then these-exact-fields, nothing else' branch (additionalProperties:
-    false), same as Xray's per-object $refs -- so a typo'd field name (e.g.
-    "sniff1ing") gets flagged, not just a typo'd type value."""
+    where a 'type' field selects the protocol and every variant's fields get
+    merged into one item schema."""
     index_path = os.path.join(config_dir, category, "index.md")
     index_text = load(index_path)
     base_url = urljoin(SITE_URL, f"configuration/{category}/")
     types = parse_type_table(index_text)
 
-    common_properties, _ = parse_fields(index_text, base_url)
-    common_properties.setdefault(
+    all_properties = {}
+    enum_values = []
+    enum_descriptions = []
+    md_enum_descriptions = []
+
+    index_props, _ = parse_fields(index_text, base_url)
+    all_properties.update(index_props)
+
+    for type_name, rel_file in types:
+        file_path = os.path.normpath(os.path.join(config_dir, category, rel_file, "index.md"))
+        if not os.path.isfile(file_path):
+            file_path = os.path.normpath(os.path.join(config_dir, category, rel_file.rstrip("/") + ".md"))
+        if not os.path.isfile(file_path):
+            enum_values.append(type_name)
+            enum_descriptions.append(f"{type_name}")
+            md_enum_descriptions.append(f"`{type_name}`")
+            continue
+
+        text = load(file_path)
+        page_url = urljoin(base_url, rel_file)
+        summary = f"See [{type_name}]({page_url}) configuration."
+
+        props, _ = parse_fields(text, page_url)
+        for shared_name in extra_shared:
+            if shared_name.lower().replace(" ", "-") in text.lower().replace(" ", "-") or shared_name in text:
+                shared_props = SHARED_FIELDS.get(shared_name, {})
+                for k, v in shared_props.items():
+                    all_properties.setdefault(k, v)
+
+        for k, v in props.items():
+            all_properties.setdefault(k, v)
+
+        enum_values.append(type_name)
+        enum_descriptions.append(summary)
+        md_enum_descriptions.append(summary)
+
+    all_properties["type"] = {
+        "type": "string",
+        "description": f"Type of the {category[:-1] if category.endswith('s') else category}.",
+        "markdownDescription": f"Type of the {category}. See [{category}]({base_url}).",
+        "enum": enum_values,
+        "enumDescriptions": enum_descriptions,
+        "markdownEnumDescriptions": md_enum_descriptions,
+    }
+    all_properties.setdefault(
         "tag",
         {
             "type": "string",
@@ -124,69 +165,12 @@ def build_discriminated_array(
         },
     )
 
-    enum_values = []
-    enum_descriptions = []
-    md_enum_descriptions = []
-    variants = []
-
-    for type_name, rel_file in types:
-        file_path = os.path.normpath(os.path.join(config_dir, category, rel_file, "index.md"))
-        if not os.path.isfile(file_path):
-            file_path = os.path.normpath(os.path.join(config_dir, category, rel_file.rstrip("/") + ".md"))
-
-        enum_values.append(type_name)
-
-        if not os.path.isfile(file_path):
-            enum_descriptions.append(type_name)
-            md_enum_descriptions.append(f"`{type_name}`")
-            continue
-
-        text = load(file_path)
-        page_url = urljoin(base_url, rel_file)
-        summary = f"See [{type_name}]({page_url}) configuration."
-        enum_descriptions.append(summary)
-        md_enum_descriptions.append(summary)
-
-        variant_properties = dict(common_properties)
-        for shared_name in extra_shared:
-            if shared_name.lower().replace(" ", "-") in text.lower().replace(" ", "-") or shared_name in text:
-                variant_properties.update(SHARED_FIELDS.get(shared_name, {}))
-
-        props, _ = parse_fields(text, page_url)
-        variant_properties.update(props)
-        variant_properties["type"] = {"const": type_name}
-
-        variants.append(
-            {
-                "if": {"properties": {"type": {"const": type_name}}}, 
-                "then": {
-                    "properties": variant_properties,
-                    "additionalProperties": False,
-                },
-            }
-        )
-
-    type_schema = {
+    return {
         "type": "object",
-        "properties": {
-            "type": {
-                "type": "string",
-                "description": f"Type of the {category[:-1] if category.endswith('s') else category}.",
-                "markdownDescription": f"Type of the {category}. See [{category}]({base_url}).",
-                "enum": enum_values,
-                "enumDescriptions": enum_descriptions,
-                "markdownEnumDescriptions": md_enum_descriptions,
-            }
-        },
-        # Permissive at the top level (a typo'd/unknown type is already caught
-        # by the enum above); once "type" matches a known value, the matching
-        # "if/then" branch below takes over with additionalProperties: false,
-        # so a typo'd *field name* for that type gets flagged too.
-        "additionalProperties": True,
+        "properties": all_properties,
         "required": ["type"],
-        "allOf": variants,
+        "additionalProperties": False,  # ИЗМЕНЕНО: Запрещаем неизвестные поля для объектов в массивах
     }
-    return type_schema
 
 
 def build_plain_object(config_dir: str, rel_path: str) -> dict:
@@ -199,7 +183,7 @@ def build_plain_object(config_dir: str, rel_path: str) -> dict:
     schema = {
         "type": "object",
         "properties": props,
-        "additionalProperties": True,
+        "additionalProperties": False,  # ИЗМЕНЕНО: Запрещаем неизвестные поля для базовых объектов
     }
     if required:
         schema["required"] = required
@@ -254,7 +238,7 @@ def main() -> None:
         if os.path.isfile(sub_path):
             base_url = urljoin(SITE_URL, f"configuration/experimental/{subdir}/")
             props, required = parse_fields(load(sub_path), base_url)
-            sub_schema = {"type": "object", "properties": props, "additionalProperties": True}
+            sub_schema = {"type": "object", "properties": props, "additionalProperties": False}  # ИЗМЕНЕНО: Запрещаем неизвестные поля в experimental под-модулях
             if required:
                 sub_schema["required"] = required
             experimental["properties"][name] = sub_schema
@@ -274,7 +258,7 @@ def main() -> None:
             "route": route,
             "experimental": experimental,
         },
-        "additionalProperties": True,
+        "additionalProperties": False,  # ИЗМЕНЕНО: Запрещаем неизвестные поля на самом верхнем уровне конфига
     }
 
     print(json.dumps(schema, indent=2, ensure_ascii=False))
