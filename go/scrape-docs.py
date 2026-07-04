@@ -2,7 +2,7 @@
 Scrapes sing-box's own docs/configuration/ tree (mkdocs-material format) into a
 single JSON Schema used by Monaco for autocomplete/hover/validation.
 
-Unlike sing-box docs don't use a special ">`field`: type"
+Unlike Xray-docs-next, sing-box docs don't use a special ">`field`: type"
 convention -- they're plain mkdocs pages with "#### field_name" headers and
 free-form markdown underneath. So instead of inferring JSON types from the
 text, we just extract (name, markdownDescription, required) per field and

@@ -4,7 +4,7 @@ go 1.24.7
 
 require (
 	github.com/sagernet/sing v0.8.9
-	github.com/sagernet/sing-box v1.13.11
+	github.com/sagernet/sing-box v1.13.14
 )
 
 require (
