@@ -1,32 +1,22 @@
-# s-validator
+# Singbox Config Validator (singbox-online)
 
-WASM-based `sing-box` configuration validator with a single-version GitHub Pages deployment.
+Parse and validate xray's JSON configuration in your browser.
 
-## URL structure
+The basic idea is: Many GUI clients do not provide good error messages if a
+JSON config fails to load. Users don't want to run the core directly to find
+the error message. Therefore, let's use a browser tool in the style of
+jsonlint.com. 
 
-- `https://adam-sizzler.github.io/s-validator/` - default version `1.13.11`
-- `https://adam-sizzler.github.io/s-validator/v/1.13.11/` - fixed version path
+[Try it out here](https://adam-sizzler.github.io/s-validator/)
 
-The pinned version is configured in [`versions.json`](./versions.json):
+Because some configuration validation happens after parsing, some mistakes are
+not caught, only most typing mistakes. If you find an obvious gap that bothers
+you, raise an issue.
 
-```json
-{
-  "pinnedVersions": ["1.13.11"],
-  "includeLatest": false
-}
-```
+## Contributing
 
-## Build behavior
+singbox-online uses a patched version of singbox-core compiled to WASM. The build process is entirely driven through the `Makefile`. A POSIX shell is recommended, WSL is probably mandatory on Windows.
 
-- A single `main.wasm` and `wasm_exec.js` pair is built for `1.13.11`.
-- The frontend is built for `/` and `/v/1.13.11/` using the same core version.
-- The output is written to `site/` and deployed to GitHub Pages.
-
-Build script: [`scripts/build-pages.sh`](./scripts/build-pages.sh).
-
-## Local build
-
-```bash
-npm ci
-./scripts/build-pages.sh
-```
+- `make build` to build the WASM module from scratch.
+- `make dev-lite` to download the WASM module from GitHub instead.
+- `make serve` to launch the development server.
