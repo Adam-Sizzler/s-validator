@@ -18,25 +18,18 @@ main.wasm: $(wildcard *.go) go.mod go.sum
 		-o main.wasm \
 		.
 
-singbox.schema.json:
-	@printf '%s\n' \
-	'{' \
-	'  "$schema": "http://json-schema.org/draft-07/schema#",' \
-	'  "title": "sing-box configuration",' \
-	'  "type": "object",' \
-	'  "properties": {' \
-	'    "$schema": { "type": "string" },' \
-	'    "log": { "type": "object" },' \
-	'    "dns": { "type": "object" },' \
-	'    "ntp": { "type": "object" },' \
-	'    "endpoints": { "type": "array", "items": { "type": "object" } },' \
-	'    "inbounds": { "type": "array", "items": { "type": "object" } },' \
-	'    "outbounds": { "type": "array", "items": { "type": "object" } },' \
-	'    "route": { "type": "object" },' \
-	'    "experimental": { "type": "object" }' \
-	'  },' \
-	'  "additionalProperties": true' \
-	'}' > singbox.schema.json
+# Sing-box keeps its own docs (docs/configuration/**) right inside the main
+# repo, unlike Xray which has a separate Xray-docs-next repo. So instead of
+# curl-ing a doc archive, we just shallow-clone the tagged sing-box repo and
+# scrape its docs/configuration tree into a JSON Schema.
+assets/sing-box-docs:
+	rm -rf assets/sing-box-docs
+	mkdir -p assets
+	git clone --depth 1 --branch $(SINGBOX_TAG) https://github.com/SagerNet/sing-box assets/sing-box-docs
+
+singbox.schema.json: assets/sing-box-docs scrape-docs.py
+	python3 scrape-docs.py assets/sing-box-docs/docs/configuration > singbox.schema.json
 
 clean:
-	rm -f main.wasm wasm_exec.js
+	rm -f main.wasm wasm_exec.js singbox.schema.json
+	rm -rf assets
