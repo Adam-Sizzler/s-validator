@@ -1,0 +1,149 @@
+diff --git a/common/buf/buffer_js.go b/common/buf/buffer_js.go
+new file mode 100644
+index 0000000..58948ef
+--- /dev/null
++++ b/common/buf/buffer_js.go
+@@ -0,0 +1,19 @@
++//go:build js
++
++package buf
++
++type iovec struct {
++	Base *byte
++	Len  uint64
++}
++
++func (v *iovec) SetLen(length int) {
++	v.Len = uint64(length)
++}
++
++func (b *Buffer) Iovec(length int) iovec {
++	var v iovec
++	v.Base = &b.data[b.start]
++	v.SetLen(length)
++	return v
++}
+diff --git a/common/buf/buffer_unix.go b/common/buf/buffer_unix.go
+index 6f56945..bdf4f19 100644
+--- a/common/buf/buffer_unix.go
++++ b/common/buf/buffer_unix.go
+@@ -1,4 +1,4 @@
+-//go:build !windows
++//go:build !windows && !js
+ 
+ package buf
+ 
+diff --git a/common/bufio/copy_direct_js.go b/common/bufio/copy_direct_js.go
+new file mode 100644
+index 0000000..3814a8d
+--- /dev/null
++++ b/common/bufio/copy_direct_js.go
+@@ -0,0 +1,59 @@
++//go:build js
++
++package bufio
++
++import (
++	"os"
++
++	"github.com/sagernet/sing/common/buf"
++	M "github.com/sagernet/sing/common/metadata"
++	N "github.com/sagernet/sing/common/network"
++)
++
++type syscallReadWaiter struct{}
++
++func createSyscallReadWaiter(reader any) (*syscallReadWaiter, bool) {
++	_ = reader
++	return nil, false
++}
++
++func (w *syscallReadWaiter) InitializeReadWaiter(options N.ReadWaitOptions) (needCopy bool) {
++	_ = options
++	return false
++}
++
++func (w *syscallReadWaiter) WaitReadBuffer() (buffer *buf.Buffer, err error) {
++	return nil, os.ErrInvalid
++}
++
++type vectorisedSyscallReadWaiter struct{}
++
++func createVectorisedSyscallReadWaiter(reader any) (*vectorisedSyscallReadWaiter, bool) {
++	_ = reader
++	return nil, false
++}
++
++func (w *vectorisedSyscallReadWaiter) InitializeReadWaiter(options N.ReadWaitOptions) (needCopy bool) {
++	_ = options
++	return false
++}
++
++func (w *vectorisedSyscallReadWaiter) WaitReadBuffers() (buffers []*buf.Buffer, err error) {
++	return nil, os.ErrInvalid
++}
++
++type syscallPacketReadWaiter struct{}
++
++func createSyscallPacketReadWaiter(reader any) (*syscallPacketReadWaiter, bool) {
++	_ = reader
++	return nil, false
++}
++
++func (w *syscallPacketReadWaiter) InitializeReadWaiter(options N.ReadWaitOptions) (needCopy bool) {
++	_ = options
++	return false
++}
++
++func (w *syscallPacketReadWaiter) WaitReadPacket() (buffer *buf.Buffer, destination M.Socksaddr, err error) {
++	return nil, M.Socksaddr{}, os.ErrInvalid
++}
+diff --git a/common/bufio/copy_direct_posix.go b/common/bufio/copy_direct_posix.go
+index ff72bec..bf846ea 100644
+--- a/common/bufio/copy_direct_posix.go
++++ b/common/bufio/copy_direct_posix.go
+@@ -1,4 +1,4 @@
+-//go:build !windows
++//go:build !windows && !js
+ 
+ package bufio
+ 
+diff --git a/common/bufio/vectorised_js.go b/common/bufio/vectorised_js.go
+new file mode 100644
+index 0000000..f18802f
+--- /dev/null
++++ b/common/bufio/vectorised_js.go
+@@ -0,0 +1,23 @@
++//go:build js
++
++package bufio
++
++import (
++	"os"
++
++	"github.com/sagernet/sing/common/buf"
++	M "github.com/sagernet/sing/common/metadata"
++)
++
++type syscallVectorisedWriterFields struct{}
++
++func (w *SyscallVectorisedWriter) WriteVectorised(buffers []*buf.Buffer) error {
++	defer buf.ReleaseMulti(buffers)
++	return os.ErrInvalid
++}
++
++func (w *SyscallVectorisedPacketWriter) WriteVectorisedPacket(buffers []*buf.Buffer, destination M.Socksaddr) error {
++	defer buf.ReleaseMulti(buffers)
++	_ = destination
++	return os.ErrInvalid
++}
+diff --git a/common/bufio/vectorised_unix.go b/common/bufio/vectorised_unix.go
+index 351213a..b45c1c0 100644
+--- a/common/bufio/vectorised_unix.go
++++ b/common/bufio/vectorised_unix.go
+@@ -1,4 +1,4 @@
+-//go:build !windows
++//go:build !windows && !js
+ 
+ package bufio
+ 

@@ -3,7 +3,7 @@ module github.com/Adam-Sizzler/s-validator
 go 1.24.7
 
 require (
-	github.com/sagernet/sing v0.8.9
+	github.com/sagernet/sing v0.8.11
 	github.com/sagernet/sing-box v1.13.14
 )
 
@@ -17,4 +17,4 @@ require (
 	golang.org/x/tools v0.42.0 // indirect
 )
 
-replace github.com/sagernet/sing => ./deps/sing
+replace github.com/sagernet/sing => ./assets/sing-patched
